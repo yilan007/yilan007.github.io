@@ -36,20 +36,12 @@ var app = (function () {
     function is_empty(obj) {
         return Object.keys(obj).length === 0;
     }
-    function validate_store(store, name) {
-        if (store != null && typeof store.subscribe !== 'function') {
-            throw new Error(`'${name}' is not a store with a 'subscribe' method`);
-        }
-    }
     function subscribe(store, ...callbacks) {
         if (store == null) {
             return noop$5;
         }
         const unsub = store.subscribe(...callbacks);
         return unsub.unsubscribe ? () => unsub.unsubscribe() : unsub;
-    }
-    function component_subscribe(component, store, callback) {
-        component.$$.on_destroy.push(subscribe(store, callback));
     }
     function create_slot(definition, ctx, $$scope, fn) {
         if (definition) {
@@ -99,10 +91,6 @@ var app = (function () {
     }
     function null_to_empty(value) {
         return value == null ? '' : value;
-    }
-    function set_store_value(store, ret, value) {
-        store.set(value);
-        return ret;
     }
     function action_destroyer(action_result) {
         return action_result && is_function(action_result.destroy) ? action_result.destroy : noop$5;
@@ -2712,7 +2700,7 @@ var app = (function () {
     const setList = (data, index, value) => {
         const values = data.children[0];
         const valueOffsets = data.valueOffsets;
-        const set = instance$i.getVisitFn(values);
+        const set = instance$h.getVisitFn(values);
         if (Array.isArray(value)) {
             for (let idx = -1, itr = valueOffsets[index], end = valueOffsets[index + 1]; itr < end;) {
                 set(values, itr++, value[++idx]);
@@ -2728,7 +2716,7 @@ var app = (function () {
     const setMap = (data, index, value) => {
         const values = data.children[0];
         const valueOffsets = data.valueOffsets;
-        const set = instance$i.getVisitFn(values);
+        const set = instance$h.getVisitFn(values);
         let { [index]: idx, [index + 1]: end } = valueOffsets;
         const entries = value instanceof Map ? value.entries() : Object.entries(value);
         for (const val of entries) {
@@ -2743,7 +2731,7 @@ var app = (function () {
     /** @ignore */ const _setStructObjectValue = (o, v) => (set, c, f, _) => c && set(c, o, v[f.name]);
     /** @ignore */
     const setStruct = (data, index, value) => {
-        const childSetters = data.type.children.map((f) => instance$i.getVisitFn(f.type));
+        const childSetters = data.type.children.map((f) => instance$h.getVisitFn(f.type));
         const set = value instanceof Map ? _setStructMapValue(index, value) :
             value instanceof Vector ? _setStructVectorValue(index, value) :
                 Array.isArray(value) ? _setStructArrayValue(index, value) :
@@ -2762,13 +2750,13 @@ var app = (function () {
     const setDenseUnion = (data, index, value) => {
         const childIndex = data.type.typeIdToChildIndex[data.typeIds[index]];
         const child = data.children[childIndex];
-        instance$i.visit(child, data.valueOffsets[index], value);
+        instance$h.visit(child, data.valueOffsets[index], value);
     };
     /** @ignore */
     const setSparseUnion = (data, index, value) => {
         const childIndex = data.type.typeIdToChildIndex[data.typeIds[index]];
         const child = data.children[childIndex];
-        instance$i.visit(child, index, value);
+        instance$h.visit(child, index, value);
     };
     /** @ignore */
     const setDictionary = (data, index, value) => {
@@ -2790,7 +2778,7 @@ var app = (function () {
     const setFixedSizeList = (data, index, value) => {
         const { stride } = data;
         const child = data.children[0];
-        const set = instance$i.getVisitFn(child);
+        const set = instance$h.getVisitFn(child);
         if (Array.isArray(value)) {
             for (let idx = -1, offset = index * stride; ++idx < stride;) {
                 set(child, offset + idx, value[idx]);
@@ -2845,7 +2833,7 @@ var app = (function () {
     SetVisitor.prototype.visitFixedSizeList = wrapSet(setFixedSizeList);
     SetVisitor.prototype.visitMap = wrapSet(setMap);
     /** @ignore */
-    const instance$i = new SetVisitor();
+    const instance$h = new SetVisitor();
 
     // Licensed to the Apache Software Foundation (ASF) under one
     /** @ignore */ const kParent = Symbol.for('parent');
@@ -2863,7 +2851,7 @@ var app = (function () {
             const keys = parent.type.children;
             const json = {};
             for (let j = -1, n = keys.length; ++j < n;) {
-                json[keys[j].name] = instance$h.visit(parent.children[j], i);
+                json[keys[j].name] = instance$g.visit(parent.children[j], i);
             }
             return json;
         }
@@ -2894,7 +2882,7 @@ var app = (function () {
                     done: false,
                     value: [
                         this.childFields[i].name,
-                        instance$h.visit(this.children[i], this.rowIndex)
+                        instance$g.visit(this.children[i], this.rowIndex)
                     ]
                 };
             }
@@ -2929,7 +2917,7 @@ var app = (function () {
             }
             const idx = row[kParent].type.children.findIndex((f) => f.name === key);
             if (idx !== -1) {
-                const val = instance$h.visit(row[kParent].children[idx], row[kRowIndex]);
+                const val = instance$g.visit(row[kParent].children[idx], row[kRowIndex]);
                 // Cache key/val lookups
                 Reflect.set(row, key, val);
                 return val;
@@ -2938,7 +2926,7 @@ var app = (function () {
         set(row, key, val) {
             const idx = row[kParent].type.children.findIndex((f) => f.name === key);
             if (idx !== -1) {
-                instance$i.visit(row[kParent].children[idx], row[kRowIndex], val);
+                instance$h.visit(row[kParent].children[idx], row[kRowIndex], val);
                 // Cache key/val lookups
                 return Reflect.set(row, key, val);
             }
@@ -3077,13 +3065,13 @@ var app = (function () {
     const getDenseUnion = (data, index) => {
         const childIndex = data.type.typeIdToChildIndex[data.typeIds[index]];
         const child = data.children[childIndex];
-        return instance$h.visit(child, data.valueOffsets[index]);
+        return instance$g.visit(child, data.valueOffsets[index]);
     };
     /** @ignore */
     const getSparseUnion = (data, index) => {
         const childIndex = data.type.typeIdToChildIndex[data.typeIds[index]];
         const child = data.children[childIndex];
-        return instance$h.visit(child, index);
+        return instance$g.visit(child, index);
     };
     /** @ignore */
     const getDictionary = (data, index) => {
@@ -3156,7 +3144,7 @@ var app = (function () {
     GetVisitor.prototype.visitFixedSizeList = wrapGet(getFixedSizeList);
     GetVisitor.prototype.visitMap = wrapGet(getMap);
     /** @ignore */
-    const instance$h = new GetVisitor();
+    const instance$g = new GetVisitor();
 
     // Licensed to the Apache Software Foundation (ASF) under one
     /** @ignore */ const kKeys = Symbol.for('keys');
@@ -3177,7 +3165,7 @@ var app = (function () {
             const vals = this[kVals];
             const json = {};
             for (let i = -1, n = keys.length; ++i < n;) {
-                json[keys.get(i)] = instance$h.visit(vals, i);
+                json[keys.get(i)] = instance$g.visit(vals, i);
             }
             return json;
         }
@@ -3206,7 +3194,7 @@ var app = (function () {
                 done: false,
                 value: [
                     this.keys.get(i),
-                    instance$h.visit(this.vals, i),
+                    instance$g.visit(this.vals, i),
                 ]
             };
         }
@@ -3236,7 +3224,7 @@ var app = (function () {
             }
             const idx = row[kKeys].indexOf(key);
             if (idx !== -1) {
-                const val = instance$h.visit(Reflect.get(row, kVals), idx);
+                const val = instance$g.visit(Reflect.get(row, kVals), idx);
                 // Cache key/val lookups
                 Reflect.set(row, key, val);
                 return val;
@@ -3245,7 +3233,7 @@ var app = (function () {
         set(row, key, val) {
             const idx = row[kKeys].indexOf(key);
             if (idx !== -1) {
-                instance$i.visit(Reflect.get(row, kVals), idx, val);
+                instance$h.visit(Reflect.get(row, kVals), idx, val);
                 // Cache key/val lookups
                 return Reflect.set(row, key, val);
             }
@@ -4002,7 +3990,7 @@ var app = (function () {
         if (searchElement === null) {
             return indexOfNull(data, fromIndex);
         }
-        const get = instance$h.getVisitFn(data);
+        const get = instance$g.getVisitFn(data);
         const compare = createElementComparator(searchElement);
         for (let i = (fromIndex || 0) - 1, n = data.length; ++i < n;) {
             if (compare(get(data, i))) {
@@ -4017,7 +4005,7 @@ var app = (function () {
         // If the searchElement is null, we don't know whether it came from the Union's
         // bitmap or one of its childrens'. So we don't interrogate the Union's bitmap,
         // since that will report the wrong index if a child has a null before the Union.
-        const get = instance$h.getVisitFn(data);
+        const get = instance$g.getVisitFn(data);
         const compare = createElementComparator(searchElement);
         for (let i = (fromIndex || 0) - 1, n = data.length; ++i < n;) {
             if (compare(get(data, i))) {
@@ -4070,7 +4058,7 @@ var app = (function () {
     IndexOfVisitor.prototype.visitFixedSizeList = indexOfValue;
     IndexOfVisitor.prototype.visitMap = indexOfValue;
     /** @ignore */
-    const instance$g = new IndexOfVisitor();
+    const instance$f = new IndexOfVisitor();
 
     // Licensed to the Apache Software Foundation (ASF) under one
     /** @ignore */
@@ -4161,7 +4149,7 @@ var app = (function () {
     IteratorVisitor.prototype.visitFixedSizeList = vectorIterator;
     IteratorVisitor.prototype.visitMap = vectorIterator;
     /** @ignore */
-    const instance$f = new IteratorVisitor();
+    const instance$e = new IteratorVisitor();
 
     /* istanbul ignore file */
     /** @ignore */ const sum$2 = (x, y) => x + y;
@@ -4196,7 +4184,7 @@ var app = (function () {
         const child = children[0];
         const { [index * stride]: start } = valueOffsets;
         const { [index * stride + 1]: end } = valueOffsets;
-        const visit = instance$e.getVisitFn(child.type);
+        const visit = instance$d.getVisitFn(child.type);
         const slice = child.slice(start, end - start);
         let size = 8; // 4 + 4 for the indices
         for (let idx = -1, len = end - start; ++idx < len;) {
@@ -4208,7 +4196,7 @@ var app = (function () {
     const getFixedSizeListByteLength = ({ stride, children }, index) => {
         const child = children[0];
         const slice = child.slice(index * stride, stride);
-        const visit = instance$e.getVisitFn(child.type);
+        const visit = instance$d.getVisitFn(child.type);
         let size = 0;
         for (let idx = -1, len = slice.length; ++idx < len;) {
             size += visit(slice, idx);
@@ -4226,12 +4214,12 @@ var app = (function () {
     const getDenseUnionByteLength = ({ type, children, typeIds, valueOffsets }, index) => {
         const childIndex = type.typeIdToChildIndex[typeIds[index]];
         // 4 for the typeId, 4 for the valueOffsets, then the child at the offset
-        return 8 + instance$e.visit(children[childIndex], valueOffsets[index]);
+        return 8 + instance$d.visit(children[childIndex], valueOffsets[index]);
     };
     /** @ignore */
     const getSparseUnionByteLength = ({ children }, index) => {
         // 4 for the typeId, then once each for the children at this index
-        return 4 + instance$e.visitMany(children, children.map(() => index)).reduce(sum$2, 0);
+        return 4 + instance$d.visitMany(children, children.map(() => index)).reduce(sum$2, 0);
     };
     GetByteLengthVisitor.prototype.visitUtf8 = getUtf8ByteLength;
     GetByteLengthVisitor.prototype.visitBinary = getBinaryByteLength;
@@ -4241,7 +4229,7 @@ var app = (function () {
     GetByteLengthVisitor.prototype.visitDenseUnion = getDenseUnionByteLength;
     GetByteLengthVisitor.prototype.visitSparseUnion = getSparseUnionByteLength;
     /** @ignore */
-    const instance$e = new GetByteLengthVisitor();
+    const instance$d = new GetByteLengthVisitor();
 
     // Licensed to the Apache Software Foundation (ASF) under one
     // or more contributor license agreements.  See the NOTICE file
@@ -4372,7 +4360,7 @@ var app = (function () {
          * Iterator for the Vector's elements.
          */
         [Symbol.iterator]() {
-            return instance$f.visit(this);
+            return instance$e.visit(this);
         }
         /**
          * Combines two or more Vectors of the same type.
@@ -4514,17 +4502,17 @@ var app = (function () {
             .map((T) => Type$2[T])
             .filter((T) => typeof T === 'number' && T !== Type$2.NONE);
         for (const typeId of typeIds) {
-            const get = instance$h.getVisitFnByTypeId(typeId);
-            const set = instance$i.getVisitFnByTypeId(typeId);
-            const indexOf = instance$g.getVisitFnByTypeId(typeId);
-            const byteLength = instance$e.getVisitFnByTypeId(typeId);
+            const get = instance$g.getVisitFnByTypeId(typeId);
+            const set = instance$h.getVisitFnByTypeId(typeId);
+            const indexOf = instance$f.getVisitFnByTypeId(typeId);
+            const byteLength = instance$d.getVisitFnByTypeId(typeId);
             visitorsByTypeId[typeId] = { get, set, indexOf, byteLength };
             vectorPrototypesByTypeId[typeId] = Object.create(proto, {
                 ['isValid']: { value: wrapChunkedCall1(isChunkedValid) },
-                ['get']: { value: wrapChunkedCall1(instance$h.getVisitFnByTypeId(typeId)) },
-                ['set']: { value: wrapChunkedCall2(instance$i.getVisitFnByTypeId(typeId)) },
-                ['indexOf']: { value: wrapChunkedIndexOf(instance$g.getVisitFnByTypeId(typeId)) },
-                ['getByteLength']: { value: wrapChunkedCall1(instance$e.getVisitFnByTypeId(typeId)) },
+                ['get']: { value: wrapChunkedCall1(instance$g.getVisitFnByTypeId(typeId)) },
+                ['set']: { value: wrapChunkedCall2(instance$h.getVisitFnByTypeId(typeId)) },
+                ['indexOf']: { value: wrapChunkedIndexOf(instance$f.getVisitFnByTypeId(typeId)) },
+                ['getByteLength']: { value: wrapChunkedCall1(instance$d.getVisitFnByTypeId(typeId)) },
             });
         }
         return 'Vector';
@@ -8145,25 +8133,25 @@ var app = (function () {
     function compareList(type, other) {
         return (type === other) || (compareConstructor(type, other) &&
             type.children.length === other.children.length &&
-            instance$d.compareManyFields(type.children, other.children));
+            instance$c.compareManyFields(type.children, other.children));
     }
     function compareStruct(type, other) {
         return (type === other) || (compareConstructor(type, other) &&
             type.children.length === other.children.length &&
-            instance$d.compareManyFields(type.children, other.children));
+            instance$c.compareManyFields(type.children, other.children));
     }
     function compareUnion(type, other) {
         return (type === other) || (compareConstructor(type, other) &&
             type.mode === other.mode &&
             type.typeIds.every((x, i) => x === other.typeIds[i]) &&
-            instance$d.compareManyFields(type.children, other.children));
+            instance$c.compareManyFields(type.children, other.children));
     }
     function compareDictionary(type, other) {
         return (type === other) || (compareConstructor(type, other) &&
             type.id === other.id &&
             type.isOrdered === other.isOrdered &&
-            instance$d.visit(type.indices, other.indices) &&
-            instance$d.visit(type.dictionary, other.dictionary));
+            instance$c.visit(type.indices, other.indices) &&
+            instance$c.visit(type.dictionary, other.dictionary));
     }
     function compareInterval(type, other) {
         return (type === other) || (compareConstructor(type, other) &&
@@ -8173,13 +8161,13 @@ var app = (function () {
         return (type === other) || (compareConstructor(type, other) &&
             type.listSize === other.listSize &&
             type.children.length === other.children.length &&
-            instance$d.compareManyFields(type.children, other.children));
+            instance$c.compareManyFields(type.children, other.children));
     }
     function compareMap(type, other) {
         return (type === other) || (compareConstructor(type, other) &&
             type.keysSorted === other.keysSorted &&
             type.children.length === other.children.length &&
-            instance$d.compareManyFields(type.children, other.children));
+            instance$c.compareManyFields(type.children, other.children));
     }
     TypeComparator.prototype.visitNull = compareAny;
     TypeComparator.prototype.visitBool = compareAny;
@@ -8225,9 +8213,9 @@ var app = (function () {
     TypeComparator.prototype.visitFixedSizeList = compareFixedSizeList;
     TypeComparator.prototype.visitMap = compareMap;
     /** @ignore */
-    const instance$d = new TypeComparator();
+    const instance$c = new TypeComparator();
     function compareSchemas(schema, other) {
-        return instance$d.compareSchemas(schema, other);
+        return instance$c.compareSchemas(schema, other);
     }
 
     // Licensed to the Apache Software Foundation (ASF) under one
@@ -8444,7 +8432,7 @@ var app = (function () {
          * Iterator for rows in this Table.
          */
         [Symbol.iterator]() {
-            return instance$f.visit(new Vector(this.data));
+            return instance$e.visit(new Vector(this.data));
         }
         /**
          * Return a JavaScript Array of the Table rows.
@@ -8581,10 +8569,10 @@ var app = (function () {
         proto._nullCount = -1;
         proto[Symbol.isConcatSpreadable] = true;
         proto['isValid'] = wrapChunkedCall1(isChunkedValid);
-        proto['get'] = wrapChunkedCall1(instance$h.getVisitFn(Type$2.Struct));
-        proto['set'] = wrapChunkedCall2(instance$i.getVisitFn(Type$2.Struct));
-        proto['indexOf'] = wrapChunkedIndexOf(instance$g.getVisitFn(Type$2.Struct));
-        proto['getByteLength'] = wrapChunkedCall1(instance$e.getVisitFn(Type$2.Struct));
+        proto['get'] = wrapChunkedCall1(instance$g.getVisitFn(Type$2.Struct));
+        proto['set'] = wrapChunkedCall2(instance$h.getVisitFn(Type$2.Struct));
+        proto['indexOf'] = wrapChunkedIndexOf(instance$f.getVisitFn(Type$2.Struct));
+        proto['getByteLength'] = wrapChunkedCall1(instance$d.getVisitFn(Type$2.Struct));
         return 'Table';
     })(Table.prototype);
 
@@ -8676,7 +8664,7 @@ var app = (function () {
          * @param index The index of the element to read.
          */
         get(index) {
-            return instance$h.visit(this.data, index);
+            return instance$g.visit(this.data, index);
         }
         /**
          * Set a row by position.
@@ -8684,7 +8672,7 @@ var app = (function () {
          * @param value The value to set.
          */
         set(index, value) {
-            return instance$i.visit(this.data, index, value);
+            return instance$h.visit(this.data, index, value);
         }
         /**
          * Retrieve the index of the first occurrence of a row in an RecordBatch.
@@ -8692,20 +8680,20 @@ var app = (function () {
          * @param offset The index at which to begin the search. If offset is omitted, the search starts at index 0.
          */
         indexOf(element, offset) {
-            return instance$g.visit(this.data, element, offset);
+            return instance$f.visit(this.data, element, offset);
         }
         /**
          * Get the size (in bytes) of a row by index.
          * @param index The row index for which to compute the byteLength.
          */
         getByteLength(index) {
-            return instance$e.visit(this.data, index);
+            return instance$d.visit(this.data, index);
         }
         /**
          * Iterator for rows in this RecordBatch.
          */
         [Symbol.iterator]() {
-            return instance$f.visit(new Vector([this.data]));
+            return instance$e.visit(new Vector([this.data]));
         }
         /**
          * Return a JavaScript Array of the RecordBatch rows.
@@ -9425,7 +9413,7 @@ var app = (function () {
         }
     }
     /** @ignore */
-    const instance$c = new TypeAssembler();
+    const instance$b = new TypeAssembler();
 
     // Licensed to the Apache Software Foundation (ASF) under one
     /** @ignore */
@@ -9946,12 +9934,12 @@ var app = (function () {
         const type = field.type;
         let typeId = field.typeId;
         if (!DataType.isDictionary(type)) {
-            typeOffset = instance$c.visit(type, b);
+            typeOffset = instance$b.visit(type, b);
         }
         else {
             typeId = type.dictionary.typeId;
-            dictionaryOffset = instance$c.visit(type, b);
-            typeOffset = instance$c.visit(type.dictionary, b);
+            dictionaryOffset = instance$b.visit(type, b);
+            typeOffset = instance$b.visit(type.dictionary, b);
         }
         const childOffsets = (type.children || []).map((f) => Field$2.encode(b, f));
         const childrenVectorOffset = Field$3.createChildrenVector(b, childOffsets);
@@ -11559,7 +11547,7 @@ var app = (function () {
 
     /* node_modules/svelte-range-slider-pips/src/RangePips.svelte generated by Svelte v3.46.4 */
 
-    const file$7 = "node_modules/svelte-range-slider-pips/src/RangePips.svelte";
+    const file$6 = "node_modules/svelte-range-slider-pips/src/RangePips.svelte";
 
     function get_each_context$2(ctx, list, i) {
     	const child_ctx = ctx.slice();
@@ -11584,7 +11572,7 @@ var app = (function () {
     			attr_dev(span, "style", span_style_value = "" + (/*orientationStart*/ ctx[14] + ": 0%;"));
     			toggle_class(span, "selected", /*isSelected*/ ctx[18](/*min*/ ctx[0]));
     			toggle_class(span, "in-range", /*inRange*/ ctx[17](/*min*/ ctx[0]));
-    			add_location(span, file$7, 177, 4, 4438);
+    			add_location(span, file$6, 177, 4, 4438);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, span, anchor);
@@ -11679,7 +11667,7 @@ var app = (function () {
     			t = text$3(t_value);
     			if (if_block1) if_block1.c();
     			attr_dev(span, "class", "pipVal");
-    			add_location(span, file$7, 186, 8, 4728);
+    			add_location(span, file$6, 186, 8, 4728);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, span, anchor);
@@ -11744,7 +11732,7 @@ var app = (function () {
     			span = element$2("span");
     			t = text$3(/*prefix*/ ctx[10]);
     			attr_dev(span, "class", "pipVal-prefix");
-    			add_location(span, file$7, 187, 22, 4772);
+    			add_location(span, file$6, 187, 22, 4772);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, span, anchor);
@@ -11779,7 +11767,7 @@ var app = (function () {
     			span = element$2("span");
     			t = text$3(/*suffix*/ ctx[11]);
     			attr_dev(span, "class", "pipVal-suffix");
-    			add_location(span, file$7, 187, 112, 4862);
+    			add_location(span, file$6, 187, 112, 4862);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, span, anchor);
@@ -11890,7 +11878,7 @@ var app = (function () {
     			attr_dev(span, "style", span_style_value = "" + (/*orientationStart*/ ctx[14] + ": " + /*percentOf*/ ctx[15](/*pipVal*/ ctx[19](/*i*/ ctx[30])) + "%;"));
     			toggle_class(span, "selected", /*isSelected*/ ctx[18](/*pipVal*/ ctx[19](/*i*/ ctx[30])));
     			toggle_class(span, "in-range", /*inRange*/ ctx[17](/*pipVal*/ ctx[19](/*i*/ ctx[30])));
-    			add_location(span, file$7, 196, 8, 5101);
+    			add_location(span, file$6, 196, 8, 5101);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, span, anchor);
@@ -11986,7 +11974,7 @@ var app = (function () {
     			t = text$3(t_value);
     			if (if_block1) if_block1.c();
     			attr_dev(span, "class", "pipVal");
-    			add_location(span, file$7, 205, 12, 5465);
+    			add_location(span, file$6, 205, 12, 5465);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, span, anchor);
@@ -12051,7 +12039,7 @@ var app = (function () {
     			span = element$2("span");
     			t = text$3(/*prefix*/ ctx[10]);
     			attr_dev(span, "class", "pipVal-prefix");
-    			add_location(span, file$7, 206, 26, 5513);
+    			add_location(span, file$6, 206, 26, 5513);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, span, anchor);
@@ -12086,7 +12074,7 @@ var app = (function () {
     			span = element$2("span");
     			t = text$3(/*suffix*/ ctx[11]);
     			attr_dev(span, "class", "pipVal-suffix");
-    			add_location(span, file$7, 206, 131, 5618);
+    			add_location(span, file$6, 206, 131, 5618);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, span, anchor);
@@ -12160,7 +12148,7 @@ var app = (function () {
     }
 
     // (215:2) {#if ( all && last !== false ) || last}
-    function create_if_block$2(ctx) {
+    function create_if_block$1(ctx) {
     	let span;
     	let span_style_value;
     	let mounted;
@@ -12175,7 +12163,7 @@ var app = (function () {
     			attr_dev(span, "style", span_style_value = "" + (/*orientationStart*/ ctx[14] + ": 100%;"));
     			toggle_class(span, "selected", /*isSelected*/ ctx[18](/*max*/ ctx[1]));
     			toggle_class(span, "in-range", /*inRange*/ ctx[17](/*max*/ ctx[1]));
-    			add_location(span, file$7, 215, 4, 5798);
+    			add_location(span, file$6, 215, 4, 5798);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, span, anchor);
@@ -12246,7 +12234,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_if_block$2.name,
+    		id: create_if_block$1.name,
     		type: "if",
     		source: "(215:2) {#if ( all && last !== false ) || last}",
     		ctx
@@ -12270,7 +12258,7 @@ var app = (function () {
     			t = text$3(t_value);
     			if (if_block1) if_block1.c();
     			attr_dev(span, "class", "pipVal");
-    			add_location(span, file$7, 224, 8, 6088);
+    			add_location(span, file$6, 224, 8, 6088);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, span, anchor);
@@ -12335,7 +12323,7 @@ var app = (function () {
     			span = element$2("span");
     			t = text$3(/*prefix*/ ctx[10]);
     			attr_dev(span, "class", "pipVal-prefix");
-    			add_location(span, file$7, 225, 22, 6132);
+    			add_location(span, file$6, 225, 22, 6132);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, span, anchor);
@@ -12370,7 +12358,7 @@ var app = (function () {
     			span = element$2("span");
     			t = text$3(/*suffix*/ ctx[11]);
     			attr_dev(span, "class", "pipVal-suffix");
-    			add_location(span, file$7, 225, 121, 6231);
+    			add_location(span, file$6, 225, 121, 6231);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, span, anchor);
@@ -12395,13 +12383,13 @@ var app = (function () {
     	return block;
     }
 
-    function create_fragment$b(ctx) {
+    function create_fragment$a(ctx) {
     	let div;
     	let t0;
     	let t1;
     	let if_block0 = (/*all*/ ctx[6] && /*first*/ ctx[7] !== false || /*first*/ ctx[7]) && create_if_block_9(ctx);
     	let if_block1 = (/*all*/ ctx[6] && /*rest*/ ctx[9] !== false || /*rest*/ ctx[9]) && create_if_block_4$1(ctx);
-    	let if_block2 = (/*all*/ ctx[6] && /*last*/ ctx[8] !== false || /*last*/ ctx[8]) && create_if_block$2(ctx);
+    	let if_block2 = (/*all*/ ctx[6] && /*last*/ ctx[8] !== false || /*last*/ ctx[8]) && create_if_block$1(ctx);
 
     	const block = {
     		c: function create() {
@@ -12417,7 +12405,7 @@ var app = (function () {
     			toggle_class(div, "vertical", /*vertical*/ ctx[2]);
     			toggle_class(div, "reversed", /*reversed*/ ctx[3]);
     			toggle_class(div, "focus", /*focus*/ ctx[13]);
-    			add_location(div, file$7, 168, 0, 4273);
+    			add_location(div, file$6, 168, 0, 4273);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -12461,7 +12449,7 @@ var app = (function () {
     				if (if_block2) {
     					if_block2.p(ctx, dirty);
     				} else {
-    					if_block2 = create_if_block$2(ctx);
+    					if_block2 = create_if_block$1(ctx);
     					if_block2.c();
     					if_block2.m(div, null);
     				}
@@ -12502,7 +12490,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$b.name,
+    		id: create_fragment$a.name,
     		type: "component",
     		source: "",
     		ctx
@@ -12511,7 +12499,7 @@ var app = (function () {
     	return block;
     }
 
-    function instance$b($$self, $$props, $$invalidate) {
+    function instance$a($$self, $$props, $$invalidate) {
     	let pipStep;
     	let pipCount;
     	let pipVal;
@@ -12739,7 +12727,7 @@ var app = (function () {
     	constructor(options) {
     		super(options);
 
-    		init$1(this, options, instance$b, create_fragment$b, safe_not_equal, {
+    		init$1(this, options, instance$a, create_fragment$a, safe_not_equal, {
     			range: 22,
     			min: 0,
     			max: 1,
@@ -12768,7 +12756,7 @@ var app = (function () {
     			component: this,
     			tagName: "RangePips",
     			options,
-    			id: create_fragment$b.name
+    			id: create_fragment$a.name
     		});
     	}
 
@@ -12951,8 +12939,8 @@ var app = (function () {
 
     /* node_modules/svelte-range-slider-pips/src/RangeSlider.svelte generated by Svelte v3.46.4 */
 
-    const { console: console_1$3 } = globals;
-    const file$6 = "node_modules/svelte-range-slider-pips/src/RangeSlider.svelte";
+    const { console: console_1$2 } = globals;
+    const file$5 = "node_modules/svelte-range-slider-pips/src/RangeSlider.svelte";
 
     function get_each_context$1(ctx, list, i) {
     	const child_ctx = ctx.slice();
@@ -12976,7 +12964,7 @@ var app = (function () {
     			t = text$3(t_value);
     			if (if_block1) if_block1.c();
     			attr_dev(span, "class", "rangeFloat");
-    			add_location(span, file$6, 821, 8, 24447);
+    			add_location(span, file$5, 821, 8, 24447);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, span, anchor);
@@ -13041,7 +13029,7 @@ var app = (function () {
     			span = element$2("span");
     			t = text$3(/*prefix*/ ctx[18]);
     			attr_dev(span, "class", "rangeFloat-prefix");
-    			add_location(span, file$6, 822, 22, 24495);
+    			add_location(span, file$5, 822, 22, 24495);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, span, anchor);
@@ -13076,7 +13064,7 @@ var app = (function () {
     			span = element$2("span");
     			t = text$3(/*suffix*/ ctx[19]);
     			attr_dev(span, "class", "rangeFloat-suffix");
-    			add_location(span, file$6, 822, 133, 24606);
+    			add_location(span, file$5, 822, 133, 24606);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, span, anchor);
@@ -13124,7 +13112,7 @@ var app = (function () {
     			t = space();
     			if (if_block) if_block.c();
     			attr_dev(span0, "class", "rangeNub");
-    			add_location(span0, file$6, 819, 6, 24395);
+    			add_location(span0, file$5, 819, 6, 24395);
     			attr_dev(span1, "role", "slider");
     			attr_dev(span1, "class", "rangeHandle");
     			attr_dev(span1, "data-handle", /*index*/ ctx[66]);
@@ -13146,7 +13134,7 @@ var app = (function () {
     			attr_dev(span1, "tabindex", span1_tabindex_value = /*disabled*/ ctx[10] ? -1 : 0);
     			toggle_class(span1, "active", /*focus*/ ctx[24] && /*activeHandle*/ ctx[26] === /*index*/ ctx[66]);
     			toggle_class(span1, "press", /*handlePressed*/ ctx[25] && /*activeHandle*/ ctx[26] === /*index*/ ctx[66]);
-    			add_location(span1, file$6, 800, 4, 23582);
+    			add_location(span1, file$5, 800, 4, 23582);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, span1, anchor);
@@ -13255,7 +13243,7 @@ var app = (function () {
     			span = element$2("span");
     			attr_dev(span, "class", "rangeBar");
     			attr_dev(span, "style", span_style_value = "" + (/*orientationStart*/ ctx[28] + ": " + /*rangeStart*/ ctx[32](/*$springPositions*/ ctx[29]) + "%; " + /*orientationEnd*/ ctx[27] + ": " + /*rangeEnd*/ ctx[33](/*$springPositions*/ ctx[29]) + "%;"));
-    			add_location(span, file$6, 828, 4, 24727);
+    			add_location(span, file$5, 828, 4, 24727);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, span, anchor);
@@ -13282,7 +13270,7 @@ var app = (function () {
     }
 
     // (834:2) {#if pips}
-    function create_if_block$1(ctx) {
+    function create_if_block(ctx) {
     	let rangepips;
     	let current;
 
@@ -13362,7 +13350,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_if_block$1.name,
+    		id: create_if_block.name,
     		type: "if",
     		source: "(834:2) {#if pips}",
     		ctx
@@ -13371,7 +13359,7 @@ var app = (function () {
     	return block;
     }
 
-    function create_fragment$a(ctx) {
+    function create_fragment$9(ctx) {
     	let div;
     	let t0;
     	let t1;
@@ -13387,7 +13375,7 @@ var app = (function () {
     	}
 
     	let if_block0 = /*range*/ ctx[2] && create_if_block_1(ctx);
-    	let if_block1 = /*pips*/ ctx[11] && create_if_block$1(ctx);
+    	let if_block1 = /*pips*/ ctx[11] && create_if_block(ctx);
 
     	const block = {
     		c: function create() {
@@ -13413,7 +13401,7 @@ var app = (function () {
     			toggle_class(div, "max", /*range*/ ctx[2] === 'max');
     			toggle_class(div, "pips", /*pips*/ ctx[11]);
     			toggle_class(div, "pip-labels", /*all*/ ctx[13] === 'label' || /*first*/ ctx[14] === 'label' || /*last*/ ctx[15] === 'label' || /*rest*/ ctx[16] === 'label');
-    			add_location(div, file$6, 780, 0, 23048);
+    			add_location(div, file$5, 780, 0, 23048);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -13496,7 +13484,7 @@ var app = (function () {
     						transition_in(if_block1, 1);
     					}
     				} else {
-    					if_block1 = create_if_block$1(ctx);
+    					if_block1 = create_if_block(ctx);
     					if_block1.c();
     					transition_in(if_block1, 1);
     					if_block1.m(div, null);
@@ -13577,7 +13565,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$a.name,
+    		id: create_fragment$9.name,
     		type: "component",
     		source: "",
     		ctx
@@ -13611,7 +13599,7 @@ var app = (function () {
     	}
     }
 
-    function instance$a($$self, $$props, $$invalidate) {
+    function instance$9($$self, $$props, $$invalidate) {
     	let percentOf;
     	let clampValue;
     	let alignValueToStep;
@@ -14117,7 +14105,7 @@ var app = (function () {
     	];
 
     	Object.keys($$props).forEach(key => {
-    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console_1$3.warn(`<RangeSlider> was created with unknown prop '${key}'`);
+    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console_1$2.warn(`<RangeSlider> was created with unknown prop '${key}'`);
     	});
 
     	function div_binding($$value) {
@@ -14452,8 +14440,8 @@ var app = (function () {
     		init$1(
     			this,
     			options,
-    			instance$a,
-    			create_fragment$a,
+    			instance$9,
+    			create_fragment$9,
     			safe_not_equal,
     			{
     				slider: 1,
@@ -14490,7 +14478,7 @@ var app = (function () {
     			component: this,
     			tagName: "RangeSlider",
     			options,
-    			id: create_fragment$a.name
+    			id: create_fragment$9.name
     		});
     	}
 
@@ -14697,7 +14685,7 @@ var app = (function () {
 
     /* src/Widgets/SliderRange.svelte generated by Svelte v3.46.4 */
 
-    function create_fragment$9(ctx) {
+    function create_fragment$8(ctx) {
     	let t0;
     	let t1;
     	let rangeslider;
@@ -14773,7 +14761,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$9.name,
+    		id: create_fragment$8.name,
     		type: "component",
     		source: "",
     		ctx
@@ -14782,7 +14770,7 @@ var app = (function () {
     	return block;
     }
 
-    function instance$9($$self, $$props, $$invalidate) {
+    function instance$8($$self, $$props, $$invalidate) {
     	let { $$slots: slots = {}, $$scope } = $$props;
     	validate_slots('SliderRange', slots, []);
     	let { min } = $$props;
@@ -14890,7 +14878,7 @@ var app = (function () {
     	constructor(options) {
     		super(options);
 
-    		init$1(this, options, instance$9, create_fragment$9, safe_not_equal, {
+    		init$1(this, options, instance$8, create_fragment$8, safe_not_equal, {
     			min: 0,
     			max: 1,
     			min_var_name: 2,
@@ -14905,7 +14893,7 @@ var app = (function () {
     			component: this,
     			tagName: "SliderRange",
     			options,
-    			id: create_fragment$9.name
+    			id: create_fragment$8.name
     		});
 
     		const { ctx } = this.$$;
@@ -15011,9 +14999,9 @@ var app = (function () {
 
     /* src/Widgets/InputBox.svelte generated by Svelte v3.46.4 */
 
-    const file$5 = "src/Widgets/InputBox.svelte";
+    const file$4 = "src/Widgets/InputBox.svelte";
 
-    function create_fragment$8(ctx) {
+    function create_fragment$7(ctx) {
     	let t0;
     	let t1;
     	let input;
@@ -15025,7 +15013,7 @@ var app = (function () {
     			t0 = text$3(/*label*/ ctx[3]);
     			t1 = space();
     			input = element$2("input");
-    			add_location(input, file$5, 8, 0, 118);
+    			add_location(input, file$4, 8, 0, 118);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -15065,7 +15053,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$8.name,
+    		id: create_fragment$7.name,
     		type: "component",
     		source: "",
     		ctx
@@ -15074,7 +15062,7 @@ var app = (function () {
     	return block;
     }
 
-    function instance$8($$self, $$props, $$invalidate) {
+    function instance$7($$self, $$props, $$invalidate) {
     	let { $$slots: slots = {}, $$scope } = $$props;
     	validate_slots('InputBox', slots, []);
     	let { default_val } = $$props;
@@ -15124,7 +15112,7 @@ var app = (function () {
     	constructor(options) {
     		super(options);
 
-    		init$1(this, options, instance$8, create_fragment$8, safe_not_equal, {
+    		init$1(this, options, instance$7, create_fragment$7, safe_not_equal, {
     			default_val: 0,
     			var_name: 1,
     			update: 2,
@@ -15135,7 +15123,7 @@ var app = (function () {
     			component: this,
     			tagName: "InputBox",
     			options,
-    			id: create_fragment$8.name
+    			id: create_fragment$7.name
     		});
 
     		const { ctx } = this.$$;
@@ -15193,7 +15181,7 @@ var app = (function () {
 
     /* src/Widgets/Dropdown.svelte generated by Svelte v3.46.4 */
 
-    const file$4 = "src/Widgets/Dropdown.svelte";
+    const file$3 = "src/Widgets/Dropdown.svelte";
 
     function get_each_context(ctx, list, i) {
     	const child_ctx = ctx.slice();
@@ -15216,7 +15204,7 @@ var app = (function () {
     			t1 = space();
     			option.__value = option_value_value = /*option*/ ctx[7];
     			option.value = option.__value;
-    			add_location(option, file$4, 14, 4, 299);
+    			add_location(option, file$3, 14, 4, 299);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, option, anchor);
@@ -15247,7 +15235,7 @@ var app = (function () {
     	return block;
     }
 
-    function create_fragment$7(ctx) {
+    function create_fragment$6(ctx) {
     	let t0;
     	let t1;
     	let select;
@@ -15272,7 +15260,7 @@ var app = (function () {
     			}
 
     			if (/*default_val*/ ctx[0] === void 0) add_render_callback(() => /*select_change_handler*/ ctx[5].call(select));
-    			add_location(select, file$4, 9, 0, 140);
+    			add_location(select, file$3, 9, 0, 140);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -15342,7 +15330,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$7.name,
+    		id: create_fragment$6.name,
     		type: "component",
     		source: "",
     		ctx
@@ -15351,7 +15339,7 @@ var app = (function () {
     	return block;
     }
 
-    function instance$7($$self, $$props, $$invalidate) {
+    function instance$6($$self, $$props, $$invalidate) {
     	let { $$slots: slots = {}, $$scope } = $$props;
     	validate_slots('Dropdown', slots, []);
     	let { default_val } = $$props;
@@ -15419,7 +15407,7 @@ var app = (function () {
     	constructor(options) {
     		super(options);
 
-    		init$1(this, options, instance$7, create_fragment$7, safe_not_equal, {
+    		init$1(this, options, instance$6, create_fragment$6, safe_not_equal, {
     			default_val: 0,
     			options: 1,
     			var_name: 2,
@@ -15431,7 +15419,7 @@ var app = (function () {
     			component: this,
     			tagName: "Dropdown",
     			options,
-    			id: create_fragment$7.name
+    			id: create_fragment$6.name
     		});
 
     		const { ctx } = this.$$;
@@ -15559,9 +15547,9 @@ var app = (function () {
     }
 
     /* node_modules/svelte-layouts/Layout.svelte generated by Svelte v3.46.4 */
-    const file$3 = "node_modules/svelte-layouts/Layout.svelte";
+    const file$2 = "node_modules/svelte-layouts/Layout.svelte";
 
-    function create_fragment$6(ctx) {
+    function create_fragment$5(ctx) {
     	let div;
     	let div_class_value;
     	let css_action;
@@ -15587,7 +15575,7 @@ var app = (function () {
     				'layout'
     			)) + " svelte-1qolqkz"));
 
-    			add_location(div, file$3, 11, 0, 293);
+    			add_location(div, file$2, 11, 0, 293);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -15660,7 +15648,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$6.name,
+    		id: create_fragment$5.name,
     		type: "component",
     		source: "",
     		ctx
@@ -15669,7 +15657,7 @@ var app = (function () {
     	return block;
     }
 
-    function instance$6($$self, $$props, $$invalidate) {
+    function instance$5($$self, $$props, $$invalidate) {
     	let { $$slots: slots = {}, $$scope } = $$props;
     	validate_slots('Layout', slots, ['default']);
     	let { class: _class = '' } = $$props;
@@ -15734,7 +15722,7 @@ var app = (function () {
     	constructor(options) {
     		super(options);
 
-    		init$1(this, options, instance$6, create_fragment$6, safe_not_equal, {
+    		init$1(this, options, instance$5, create_fragment$5, safe_not_equal, {
     			class: 0,
     			inline: 1,
     			reverse: 2,
@@ -15748,7 +15736,7 @@ var app = (function () {
     			component: this,
     			tagName: "Layout",
     			options,
-    			id: create_fragment$6.name
+    			id: create_fragment$5.name
     		});
     	}
 
@@ -15869,7 +15857,7 @@ var app = (function () {
     	return block;
     }
 
-    function create_fragment$5(ctx) {
+    function create_fragment$4(ctx) {
     	let layout;
     	let current;
 
@@ -15984,7 +15972,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$5.name,
+    		id: create_fragment$4.name,
     		type: "component",
     		source: "",
     		ctx
@@ -15993,7 +15981,7 @@ var app = (function () {
     	return block;
     }
 
-    function instance$5($$self, $$props, $$invalidate) {
+    function instance$4($$self, $$props, $$invalidate) {
     	let { $$slots: slots = {}, $$scope } = $$props;
     	validate_slots('Col', slots, ['default']);
     	let { class: _class = '' } = $$props;
@@ -16207,7 +16195,7 @@ var app = (function () {
     	constructor(options) {
     		super(options);
 
-    		init$1(this, options, instance$5, create_fragment$5, safe_not_equal, {
+    		init$1(this, options, instance$4, create_fragment$4, safe_not_equal, {
     			class: 0,
     			style: 1,
     			justifyContent: 2,
@@ -16243,7 +16231,7 @@ var app = (function () {
     			component: this,
     			tagName: "Col",
     			options,
-    			id: create_fragment$5.name
+    			id: create_fragment$4.name
     		});
     	}
 
@@ -16540,7 +16528,7 @@ var app = (function () {
     	return block;
     }
 
-    function create_fragment$4(ctx) {
+    function create_fragment$3(ctx) {
     	let layout;
     	let current;
 
@@ -16655,7 +16643,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$4.name,
+    		id: create_fragment$3.name,
     		type: "component",
     		source: "",
     		ctx
@@ -16664,7 +16652,7 @@ var app = (function () {
     	return block;
     }
 
-    function instance$4($$self, $$props, $$invalidate) {
+    function instance$3($$self, $$props, $$invalidate) {
     	let { $$slots: slots = {}, $$scope } = $$props;
     	validate_slots('Row', slots, ['default']);
     	let { class: _class = '' } = $$props;
@@ -16878,7 +16866,7 @@ var app = (function () {
     	constructor(options) {
     		super(options);
 
-    		init$1(this, options, instance$4, create_fragment$4, safe_not_equal, {
+    		init$1(this, options, instance$3, create_fragment$3, safe_not_equal, {
     			class: 0,
     			style: 1,
     			justifyContent: 2,
@@ -16914,7 +16902,7 @@ var app = (function () {
     			component: this,
     			tagName: "Row",
     			options,
-    			id: create_fragment$4.name
+    			id: create_fragment$3.name
     		});
     	}
 
@@ -87101,17 +87089,17 @@ var app = (function () {
 
     /* node_modules/svelte-vega/dist/VegaEmbed.svelte generated by Svelte v3.46.4 */
 
-    const { Object: Object_1$1, console: console_1$2 } = globals;
+    const { Object: Object_1$1, console: console_1$1 } = globals;
 
-    const file$2 = "node_modules/svelte-vega/dist/VegaEmbed.svelte";
+    const file$1 = "node_modules/svelte-vega/dist/VegaEmbed.svelte";
 
-    function create_fragment$3(ctx) {
+    function create_fragment$2(ctx) {
     	let div;
 
     	const block = {
     		c: function create() {
     			div = element$2("div");
-    			add_location(div, file$2, 134, 0, 4655);
+    			add_location(div, file$1, 134, 0, 4655);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -87131,7 +87119,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$3.name,
+    		id: create_fragment$2.name,
     		type: "component",
     		source: "",
     		ctx
@@ -87140,7 +87128,7 @@ var app = (function () {
     	return block;
     }
 
-    function instance$3($$self, $$props, $$invalidate) {
+    function instance$2($$self, $$props, $$invalidate) {
     	let { $$slots: slots = {}, $$scope } = $$props;
     	validate_slots('VegaEmbed', slots, []);
 
@@ -87247,7 +87235,7 @@ var app = (function () {
     	const writable_props = ['options', 'spec', 'view', 'signalListeners', 'data'];
 
     	Object_1$1.keys($$props).forEach(key => {
-    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console_1$2.warn(`<VegaEmbed> was created with unknown prop '${key}'`);
+    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console_1$1.warn(`<VegaEmbed> was created with unknown prop '${key}'`);
     	});
 
     	function div_binding($$value) {
@@ -87407,7 +87395,7 @@ var app = (function () {
     	constructor(options) {
     		super(options);
 
-    		init$1(this, options, instance$3, create_fragment$3, safe_not_equal, {
+    		init$1(this, options, instance$2, create_fragment$2, safe_not_equal, {
     			options: 2,
     			spec: 3,
     			view: 1,
@@ -87419,22 +87407,22 @@ var app = (function () {
     			component: this,
     			tagName: "VegaEmbed",
     			options,
-    			id: create_fragment$3.name
+    			id: create_fragment$2.name
     		});
 
     		const { ctx } = this.$$;
     		const props = options.props || {};
 
     		if (/*options*/ ctx[2] === undefined && !('options' in props)) {
-    			console_1$2.warn("<VegaEmbed> was created without expected prop 'options'");
+    			console_1$1.warn("<VegaEmbed> was created without expected prop 'options'");
     		}
 
     		if (/*spec*/ ctx[3] === undefined && !('spec' in props)) {
-    			console_1$2.warn("<VegaEmbed> was created without expected prop 'spec'");
+    			console_1$1.warn("<VegaEmbed> was created without expected prop 'spec'");
     		}
 
     		if (/*view*/ ctx[1] === undefined && !('view' in props)) {
-    			console_1$2.warn("<VegaEmbed> was created without expected prop 'view'");
+    			console_1$1.warn("<VegaEmbed> was created without expected prop 'view'");
     		}
     	}
 
@@ -87485,7 +87473,7 @@ var app = (function () {
 
     const { Object: Object_1 } = globals;
 
-    function create_fragment$2(ctx) {
+    function create_fragment$1(ctx) {
     	let vegaembed;
     	let updating_view;
     	let current;
@@ -87552,7 +87540,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$2.name,
+    		id: create_fragment$1.name,
     		type: "component",
     		source: "",
     		ctx
@@ -87563,7 +87551,7 @@ var app = (function () {
 
     const mode = "vega-lite";
 
-    function instance$2($$self, $$props, $$invalidate) {
+    function instance$1($$self, $$props, $$invalidate) {
     	let vegaLiteOptions;
     	let { $$slots: slots = {}, $$scope } = $$props;
     	validate_slots('VegaLite', slots, []);
@@ -87646,7 +87634,7 @@ var app = (function () {
     	constructor(options) {
     		super(options);
 
-    		init$1(this, options, instance$2, create_fragment$2, safe_not_equal, {
+    		init$1(this, options, instance$1, create_fragment$1, safe_not_equal, {
     			view: 0,
     			spec: 1,
     			options: 5,
@@ -87658,7 +87646,7 @@ var app = (function () {
     			component: this,
     			tagName: "VegaLite",
     			options,
-    			id: create_fragment$2.name
+    			id: create_fragment$1.name
     		});
 
     		const { ctx } = this.$$;
@@ -88051,346 +88039,10 @@ with unpivot_result as (
 select * from output
 `;
 
-    const user = 'admin@gmail.com';
-    const pass = '123456';
-
-    const store = writable(null);
-
-    const getUserDetails = async ( username, password ) => {
-    	if ( username === user && password === pass )
-    		return 1
-    };
-
-    /* src/LoginComponent.svelte generated by Svelte v3.46.4 */
-
-    const { console: console_1$1 } = globals;
-    const file$1 = "src/LoginComponent.svelte";
-
-    function create_fragment$1(ctx) {
-    	let form;
-    	let div0;
-    	let label0;
-    	let t1;
-    	let input0;
-    	let t2;
-    	let div1;
-    	let label1;
-    	let t4;
-    	let input1;
-    	let t5;
-    	let button;
-    	let t7;
-    	let div2;
-    	let small;
-    	let t8;
-    	let mounted;
-    	let dispose;
-
-    	const block = {
-    		c: function create() {
-    			form = element$2("form");
-    			div0 = element$2("div");
-    			label0 = element$2("label");
-    			label0.textContent = "Username";
-    			t1 = space();
-    			input0 = element$2("input");
-    			t2 = space();
-    			div1 = element$2("div");
-    			label1 = element$2("label");
-    			label1.textContent = "Password";
-    			t4 = space();
-    			input1 = element$2("input");
-    			t5 = space();
-    			button = element$2("button");
-    			button.textContent = "Submit";
-    			t7 = space();
-    			div2 = element$2("div");
-    			small = element$2("small");
-    			t8 = text$3(/*error*/ ctx[2]);
-    			attr_dev(label0, "for", "username");
-    			attr_dev(label0, "class", "form-label");
-    			add_location(label0, file$1, 28, 2, 540);
-    			attr_dev(input0, "type", "email");
-    			attr_dev(input0, "class", "form-control");
-    			attr_dev(input0, "id", "username");
-    			add_location(input0, file$1, 29, 2, 600);
-    			attr_dev(div0, "class", "mb-3");
-    			add_location(div0, file$1, 27, 1, 519);
-    			attr_dev(label1, "for", "password");
-    			attr_dev(label1, "class", "form-label");
-    			add_location(label1, file$1, 33, 2, 711);
-    			attr_dev(input1, "type", "password");
-    			attr_dev(input1, "class", "form-control");
-    			attr_dev(input1, "id", "password");
-    			add_location(input1, file$1, 34, 2, 771);
-    			attr_dev(div1, "class", "mb-3");
-    			add_location(div1, file$1, 32, 1, 690);
-    			attr_dev(button, "type", "submit");
-    			attr_dev(button, "class", "btn btn-primary");
-    			add_location(button, file$1, 37, 1, 864);
-    			add_location(small, file$1, 39, 2, 974);
-    			attr_dev(div2, "id", "error_message");
-    			attr_dev(div2, "class", "text-danger");
-    			add_location(div2, file$1, 38, 1, 927);
-    			attr_dev(form, "class", "flex mx-auto col-6");
-    			add_location(form, file$1, 25, 0, 450);
-    		},
-    		l: function claim(nodes) {
-    			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
-    		},
-    		m: function mount(target, anchor) {
-    			insert_dev(target, form, anchor);
-    			append_dev(form, div0);
-    			append_dev(div0, label0);
-    			append_dev(div0, t1);
-    			append_dev(div0, input0);
-    			set_input_value(input0, /*username*/ ctx[0]);
-    			append_dev(form, t2);
-    			append_dev(form, div1);
-    			append_dev(div1, label1);
-    			append_dev(div1, t4);
-    			append_dev(div1, input1);
-    			set_input_value(input1, /*password*/ ctx[1]);
-    			append_dev(form, t5);
-    			append_dev(form, button);
-    			append_dev(form, t7);
-    			append_dev(form, div2);
-    			append_dev(div2, small);
-    			append_dev(small, t8);
-
-    			if (!mounted) {
-    				dispose = [
-    					listen_dev(input0, "input", /*input0_input_handler*/ ctx[4]),
-    					listen_dev(input1, "input", /*input1_input_handler*/ ctx[5]),
-    					listen_dev(form, "submit", prevent_default(/*login*/ ctx[3]), false, true, false)
-    				];
-
-    				mounted = true;
-    			}
-    		},
-    		p: function update(ctx, [dirty]) {
-    			if (dirty & /*username*/ 1 && input0.value !== /*username*/ ctx[0]) {
-    				set_input_value(input0, /*username*/ ctx[0]);
-    			}
-
-    			if (dirty & /*password*/ 2 && input1.value !== /*password*/ ctx[1]) {
-    				set_input_value(input1, /*password*/ ctx[1]);
-    			}
-
-    			if (dirty & /*error*/ 4) set_data_dev(t8, /*error*/ ctx[2]);
-    		},
-    		i: noop$5,
-    		o: noop$5,
-    		d: function destroy(detaching) {
-    			if (detaching) detach_dev(form);
-    			mounted = false;
-    			run_all(dispose);
-    		}
-    	};
-
-    	dispatch_dev("SvelteRegisterBlock", {
-    		block,
-    		id: create_fragment$1.name,
-    		type: "component",
-    		source: "",
-    		ctx
-    	});
-
-    	return block;
-    }
-
-    function instance$1($$self, $$props, $$invalidate) {
-    	let $store;
-    	validate_store(store, 'store');
-    	component_subscribe($$self, store, $$value => $$invalidate(6, $store = $$value));
-    	let { $$slots: slots = {}, $$scope } = $$props;
-    	validate_slots('LoginComponent', slots, []);
-    	let username = '';
-    	let password = '';
-    	let error = '';
-
-    	async function login() {
-    		const user = await getUserDetails(username, password);
-
-    		if (user) {
-    			console.log(user);
-    			set_store_value(store, $store = user, $store);
-    			if (error) $$invalidate(2, error = '');
-    		} else {
-    			$$invalidate(2, error = 'Incorrect username and password.');
-    			console.log("Incorrect username and password.");
-    		}
-    	}
-
-    	const writable_props = [];
-
-    	Object.keys($$props).forEach(key => {
-    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console_1$1.warn(`<LoginComponent> was created with unknown prop '${key}'`);
-    	});
-
-    	function input0_input_handler() {
-    		username = this.value;
-    		$$invalidate(0, username);
-    	}
-
-    	function input1_input_handler() {
-    		password = this.value;
-    		$$invalidate(1, password);
-    	}
-
-    	$$self.$capture_state = () => ({
-    		getUserDetails,
-    		store,
-    		username,
-    		password,
-    		error,
-    		login,
-    		$store
-    	});
-
-    	$$self.$inject_state = $$props => {
-    		if ('username' in $$props) $$invalidate(0, username = $$props.username);
-    		if ('password' in $$props) $$invalidate(1, password = $$props.password);
-    		if ('error' in $$props) $$invalidate(2, error = $$props.error);
-    	};
-
-    	if ($$props && "$$inject" in $$props) {
-    		$$self.$inject_state($$props.$$inject);
-    	}
-
-    	return [username, password, error, login, input0_input_handler, input1_input_handler];
-    }
-
-    class LoginComponent extends SvelteComponentDev {
-    	constructor(options) {
-    		super(options);
-    		init$1(this, options, instance$1, create_fragment$1, safe_not_equal, {});
-
-    		dispatch_dev("SvelteRegisterComponent", {
-    			component: this,
-    			tagName: "LoginComponent",
-    			options,
-    			id: create_fragment$1.name
-    		});
-    	}
-    }
-
     /* src/App.svelte generated by Svelte v3.46.4 */
 
     const { console: console_1 } = globals;
     const file = "src/App.svelte";
-
-    // (261:1) {:else}
-    function create_else_block(ctx) {
-    	let logincomponent;
-    	let current;
-    	logincomponent = new LoginComponent({ $$inline: true });
-
-    	const block = {
-    		c: function create() {
-    			create_component(logincomponent.$$.fragment);
-    		},
-    		m: function mount(target, anchor) {
-    			mount_component(logincomponent, target, anchor);
-    			current = true;
-    		},
-    		p: noop$5,
-    		i: function intro(local) {
-    			if (current) return;
-    			transition_in(logincomponent.$$.fragment, local);
-    			current = true;
-    		},
-    		o: function outro(local) {
-    			transition_out(logincomponent.$$.fragment, local);
-    			current = false;
-    		},
-    		d: function destroy(detaching) {
-    			destroy_component(logincomponent, detaching);
-    		}
-    	};
-
-    	dispatch_dev("SvelteRegisterBlock", {
-    		block,
-    		id: create_else_block.name,
-    		type: "else",
-    		source: "(261:1) {:else}",
-    		ctx
-    	});
-
-    	return block;
-    }
-
-    // (183:1) {#if $store != null }
-    function create_if_block(ctx) {
-    	let await_block_anchor;
-    	let promise;
-    	let current;
-
-    	let info = {
-    		ctx,
-    		current: null,
-    		token: null,
-    		hasCatch: false,
-    		pending: create_pending_block,
-    		then: create_then_block,
-    		catch: create_catch_block,
-    		value: 0,
-    		blocks: [,,,]
-    	};
-
-    	handle_promise(promise = /*db*/ ctx[0], info);
-
-    	const block = {
-    		c: function create() {
-    			await_block_anchor = empty();
-    			info.block.c();
-    		},
-    		m: function mount(target, anchor) {
-    			insert_dev(target, await_block_anchor, anchor);
-    			info.block.m(target, info.anchor = anchor);
-    			info.mount = () => await_block_anchor.parentNode;
-    			info.anchor = await_block_anchor;
-    			current = true;
-    		},
-    		p: function update(new_ctx, dirty) {
-    			ctx = new_ctx;
-    			info.ctx = ctx;
-
-    			if (dirty & /*db*/ 1 && promise !== (promise = /*db*/ ctx[0]) && handle_promise(promise, info)) ; else {
-    				update_await_block_branch(info, ctx, dirty);
-    			}
-    		},
-    		i: function intro(local) {
-    			if (current) return;
-    			transition_in(info.block);
-    			current = true;
-    		},
-    		o: function outro(local) {
-    			for (let i = 0; i < 3; i += 1) {
-    				const block = info.blocks[i];
-    				transition_out(block);
-    			}
-
-    			current = false;
-    		},
-    		d: function destroy(detaching) {
-    			if (detaching) detach_dev(await_block_anchor);
-    			info.block.d(detaching);
-    			info.token = null;
-    			info = null;
-    		}
-    	};
-
-    	dispatch_dev("SvelteRegisterBlock", {
-    		block,
-    		id: create_if_block.name,
-    		type: "if",
-    		source: "(183:1) {#if $store != null }",
-    		ctx
-    	});
-
-    	return block;
-    }
 
     // (1:0) <script lang="ts">import '@duckdb/duckdb-wasm'; import 'apache-arrow'; import 'apache-arrow'; import SliderRange from './Widgets/SliderRange.svelte'; import InputBox from './Widgets/InputBox.svelte'; import Dropdown from './Widgets/Dropdown.svelte'; import { Row, Col }
     function create_catch_block(ctx) {
@@ -88414,12 +88066,20 @@ select * from output
     	return block;
     }
 
-    // (187:1) {:then db}
+    // (194:1) {:then db}
     function create_then_block(ctx) {
-    	let h1;
+    	let br;
+    	let t0;
+    	let div;
     	let t1;
-    	let h3;
+    	let t2_value = /*data_loading_time*/ ctx[2] / 1000 + "";
+    	let t2;
     	let t3;
+    	let t4;
+    	let h1;
+    	let t6;
+    	let h3;
+    	let t8;
     	let row;
     	let current;
 
@@ -88433,28 +88093,46 @@ select * from output
 
     	const block = {
     		c: function create() {
+    			br = element$2("br");
+    			t0 = space();
+    			div = element$2("div");
+    			t1 = text$3("Data Loading Time: ");
+    			t2 = text$3(t2_value);
+    			t3 = text$3(" seconds");
+    			t4 = space();
     			h1 = element$2("h1");
     			h1.textContent = "Zambia Drought Index Insurance";
-    			t1 = space();
+    			t6 = space();
     			h3 = element$2("h3");
     			h3.textContent = "Index Parameters Optimization Application";
-    			t3 = space();
+    			t8 = space();
     			create_component(row.$$.fragment);
-    			add_location(h1, file, 187, 2, 5686);
-    			add_location(h3, file, 188, 2, 5728);
+    			add_location(br, file, 194, 2, 5903);
+    			attr_dev(div, "id", "loader");
+    			add_location(div, file, 195, 2, 5910);
+    			add_location(h1, file, 198, 2, 5996);
+    			add_location(h3, file, 199, 2, 6038);
     		},
     		m: function mount(target, anchor) {
+    			insert_dev(target, br, anchor);
+    			insert_dev(target, t0, anchor);
+    			insert_dev(target, div, anchor);
+    			append_dev(div, t1);
+    			append_dev(div, t2);
+    			append_dev(div, t3);
+    			insert_dev(target, t4, anchor);
     			insert_dev(target, h1, anchor);
-    			insert_dev(target, t1, anchor);
+    			insert_dev(target, t6, anchor);
     			insert_dev(target, h3, anchor);
-    			insert_dev(target, t3, anchor);
+    			insert_dev(target, t8, anchor);
     			mount_component(row, target, anchor);
     			current = true;
     		},
     		p: function update(ctx, dirty) {
+    			if ((!current || dirty & /*data_loading_time*/ 4) && t2_value !== (t2_value = /*data_loading_time*/ ctx[2] / 1000 + "")) set_data_dev(t2, t2_value);
     			const row_changes = {};
 
-    			if (dirty & /*$$scope, dataClimatology, dataPayout, geo*/ 4194332) {
+    			if (dirty & /*$$scope, dataClimatology, dataPayout, geo*/ 4194360) {
     				row_changes.$$scope = { dirty, ctx };
     			}
 
@@ -88470,10 +88148,14 @@ select * from output
     			current = false;
     		},
     		d: function destroy(detaching) {
+    			if (detaching) detach_dev(br);
+    			if (detaching) detach_dev(t0);
+    			if (detaching) detach_dev(div);
+    			if (detaching) detach_dev(t4);
     			if (detaching) detach_dev(h1);
-    			if (detaching) detach_dev(t1);
+    			if (detaching) detach_dev(t6);
     			if (detaching) detach_dev(h3);
-    			if (detaching) detach_dev(t3);
+    			if (detaching) detach_dev(t8);
     			destroy_component(row, detaching);
     		}
     	};
@@ -88482,14 +88164,14 @@ select * from output
     		block,
     		id: create_then_block.name,
     		type: "then",
-    		source: "(187:1) {:then db}",
+    		source: "(194:1) {:then db}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (191:2) <Col>
+    // (202:2) <Col>
     function create_default_slot_2(ctx) {
     	let dropdown0;
     	let t0;
@@ -88509,10 +88191,10 @@ select * from output
     	dropdown0 = new Dropdown({
     			props: {
     				label: "District:",
-    				default_val: /*geo*/ ctx[2][0],
+    				default_val: /*geo*/ ctx[3][0],
     				var_name: "admin2",
     				update: /*update_param*/ ctx[6],
-    				options: /*geo*/ ctx[2]
+    				options: /*geo*/ ctx[3]
     			},
     			$$inline: true
     		});
@@ -88628,8 +88310,8 @@ select * from output
     		},
     		p: function update(ctx, dirty) {
     			const dropdown0_changes = {};
-    			if (dirty & /*geo*/ 4) dropdown0_changes.default_val = /*geo*/ ctx[2][0];
-    			if (dirty & /*geo*/ 4) dropdown0_changes.options = /*geo*/ ctx[2];
+    			if (dirty & /*geo*/ 8) dropdown0_changes.default_val = /*geo*/ ctx[3][0];
+    			if (dirty & /*geo*/ 8) dropdown0_changes.options = /*geo*/ ctx[3];
     			dropdown0.$set(dropdown0_changes);
     		},
     		i: function intro(local) {
@@ -88674,14 +88356,14 @@ select * from output
     		block,
     		id: create_default_slot_2.name,
     		type: "slot",
-    		source: "(191:2) <Col>",
+    		source: "(202:2) <Col>",
     		ctx
     	});
 
     	return block;
     }
 
-    // (254:2) <Col>
+    // (265:2) <Col>
     function create_default_slot_1(ctx) {
     	let vegalite0;
     	let t0;
@@ -88692,7 +88374,7 @@ select * from output
 
     	vegalite0 = new VegaLite$1({
     			props: {
-    				data: /*dataPayout*/ ctx[3],
+    				data: /*dataPayout*/ ctx[4],
     				spec: /*specPayout*/ ctx[9],
     				view: /*viewPayout*/ ctx[8]
     			},
@@ -88701,7 +88383,7 @@ select * from output
 
     	vegalite1 = new VegaLite$1({
     			props: {
-    				data: /*dataPayout*/ ctx[3],
+    				data: /*dataPayout*/ ctx[4],
     				spec: /*specCombinedPayout*/ ctx[11],
     				view: /*viewCombinedPayout*/ ctx[10]
     			},
@@ -88710,7 +88392,7 @@ select * from output
 
     	vegalite2 = new VegaLite$1({
     			props: {
-    				data: /*dataClimatology*/ ctx[4],
+    				data: /*dataClimatology*/ ctx[5],
     				spec: /*specClimatology*/ ctx[13],
     				view: /*viewClimatology*/ ctx[12]
     			},
@@ -88735,13 +88417,13 @@ select * from output
     		},
     		p: function update(ctx, dirty) {
     			const vegalite0_changes = {};
-    			if (dirty & /*dataPayout*/ 8) vegalite0_changes.data = /*dataPayout*/ ctx[3];
+    			if (dirty & /*dataPayout*/ 16) vegalite0_changes.data = /*dataPayout*/ ctx[4];
     			vegalite0.$set(vegalite0_changes);
     			const vegalite1_changes = {};
-    			if (dirty & /*dataPayout*/ 8) vegalite1_changes.data = /*dataPayout*/ ctx[3];
+    			if (dirty & /*dataPayout*/ 16) vegalite1_changes.data = /*dataPayout*/ ctx[4];
     			vegalite1.$set(vegalite1_changes);
     			const vegalite2_changes = {};
-    			if (dirty & /*dataClimatology*/ 16) vegalite2_changes.data = /*dataClimatology*/ ctx[4];
+    			if (dirty & /*dataClimatology*/ 32) vegalite2_changes.data = /*dataClimatology*/ ctx[5];
     			vegalite2.$set(vegalite2_changes);
     		},
     		i: function intro(local) {
@@ -88770,14 +88452,14 @@ select * from output
     		block,
     		id: create_default_slot_1.name,
     		type: "slot",
-    		source: "(254:2) <Col>",
+    		source: "(265:2) <Col>",
     		ctx
     	});
 
     	return block;
     }
 
-    // (190:2) <Row>
+    // (201:2) <Row>
     function create_default_slot(ctx) {
     	let col0;
     	let t;
@@ -88815,14 +88497,14 @@ select * from output
     		p: function update(ctx, dirty) {
     			const col0_changes = {};
 
-    			if (dirty & /*$$scope, geo*/ 4194308) {
+    			if (dirty & /*$$scope, geo*/ 4194312) {
     				col0_changes.$$scope = { dirty, ctx };
     			}
 
     			col0.$set(col0_changes);
     			const col1_changes = {};
 
-    			if (dirty & /*$$scope, dataClimatology, dataPayout*/ 4194328) {
+    			if (dirty & /*$$scope, dataClimatology, dataPayout*/ 4194352) {
     				col1_changes.$$scope = { dirty, ctx };
     			}
 
@@ -88850,14 +88532,14 @@ select * from output
     		block,
     		id: create_default_slot.name,
     		type: "slot",
-    		source: "(190:2) <Row>",
+    		source: "(201:2) <Row>",
     		ctx
     	});
 
     	return block;
     }
 
-    // (184:12)    <h1>Instantiating...</h1>   {data_status}
+    // (191:12)    <h1>Instantiating...</h1>   {data_status}
     function create_pending_block(ctx) {
     	let h1;
     	let t1;
@@ -88869,7 +88551,7 @@ select * from output
     			h1.textContent = "Instantiating...";
     			t1 = space();
     			t2 = text$3(/*data_status*/ ctx[1]);
-    			add_location(h1, file, 184, 2, 5630);
+    			add_location(h1, file, 191, 2, 5847);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, h1, anchor);
@@ -88892,7 +88574,7 @@ select * from output
     		block,
     		id: create_pending_block.name,
     		type: "pending",
-    		source: "(184:12)    <h1>Instantiating...</h1>   {data_status}",
+    		source: "(191:12)    <h1>Instantiating...</h1>   {data_status}",
     		ctx
     	});
 
@@ -88901,73 +88583,65 @@ select * from output
 
     function create_fragment(ctx) {
     	let main;
-    	let current_block_type_index;
-    	let if_block;
+    	let promise;
     	let current;
-    	const if_block_creators = [create_if_block, create_else_block];
-    	const if_blocks = [];
 
-    	function select_block_type(ctx, dirty) {
-    		if (/*$store*/ ctx[5] != null) return 0;
-    		return 1;
-    	}
+    	let info = {
+    		ctx,
+    		current: null,
+    		token: null,
+    		hasCatch: false,
+    		pending: create_pending_block,
+    		then: create_then_block,
+    		catch: create_catch_block,
+    		value: 0,
+    		blocks: [,,,]
+    	};
 
-    	current_block_type_index = select_block_type(ctx);
-    	if_block = if_blocks[current_block_type_index] = if_block_creators[current_block_type_index](ctx);
+    	handle_promise(promise = /*db*/ ctx[0], info);
 
     	const block = {
     		c: function create() {
     			main = element$2("main");
-    			if_block.c();
-    			add_location(main, file, 181, 1, 5585);
+    			info.block.c();
+    			add_location(main, file, 188, 1, 5793);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, main, anchor);
-    			if_blocks[current_block_type_index].m(main, null);
+    			info.block.m(main, info.anchor = null);
+    			info.mount = () => main;
+    			info.anchor = null;
     			current = true;
     		},
-    		p: function update(ctx, [dirty]) {
-    			let previous_block_index = current_block_type_index;
-    			current_block_type_index = select_block_type(ctx);
+    		p: function update(new_ctx, [dirty]) {
+    			ctx = new_ctx;
+    			info.ctx = ctx;
 
-    			if (current_block_type_index === previous_block_index) {
-    				if_blocks[current_block_type_index].p(ctx, dirty);
-    			} else {
-    				group_outros();
-
-    				transition_out(if_blocks[previous_block_index], 1, 1, () => {
-    					if_blocks[previous_block_index] = null;
-    				});
-
-    				check_outros();
-    				if_block = if_blocks[current_block_type_index];
-
-    				if (!if_block) {
-    					if_block = if_blocks[current_block_type_index] = if_block_creators[current_block_type_index](ctx);
-    					if_block.c();
-    				} else {
-    					if_block.p(ctx, dirty);
-    				}
-
-    				transition_in(if_block, 1);
-    				if_block.m(main, null);
+    			if (dirty & /*db*/ 1 && promise !== (promise = /*db*/ ctx[0]) && handle_promise(promise, info)) ; else {
+    				update_await_block_branch(info, ctx, dirty);
     			}
     		},
     		i: function intro(local) {
     			if (current) return;
-    			transition_in(if_block);
+    			transition_in(info.block);
     			current = true;
     		},
     		o: function outro(local) {
-    			transition_out(if_block);
+    			for (let i = 0; i < 3; i += 1) {
+    				const block = info.blocks[i];
+    				transition_out(block);
+    			}
+
     			current = false;
     		},
     		d: function destroy(detaching) {
     			if (detaching) detach_dev(main);
-    			if_blocks[current_block_type_index].d();
+    			info.block.d();
+    			info.token = null;
+    			info = null;
     		}
     	};
 
@@ -88983,15 +88657,20 @@ select * from output
     }
 
     function instance($$self, $$props, $$invalidate) {
-    	let $store;
-    	validate_store(store, 'store');
-    	component_subscribe($$self, store, $$value => $$invalidate(5, $store = $$value));
     	let { $$slots: slots = {}, $$scope } = $$props;
     	validate_slots('App', slots, []);
     	var data_status = "Data not loaded";
     	let { db } = $$props;
+    	var data_loading_time = 0.0;
 
+    	// async function loadDataSize() {
+    	// 	var stats = fs.lstatSync("../public/data/chirps.csv");
+    	// 	var fileSizeInBytes = stats.size;
+    	// 	console.log(fileSizeInBytes);
+    	// }
+    	// loadDataSize();
     	async function loadData() {
+    		var start = Date.now();
     		var dbhere = await db;
     		const conn = await dbhere.connect();
 
@@ -89005,8 +88684,9 @@ select * from output
         SELECT * FROM "` + window.location.href + `data/arc.csv"
 		`);
 
-    		$$invalidate(1, data_status = "Data loaded!");
     		await conn.close();
+    		$$invalidate(2, data_loading_time = Date.now() - start);
+    		$$invalidate(1, data_status = "Data loaded!");
     	}
 
     	async function loadGeoLocations() {
@@ -89042,7 +88722,6 @@ select * from output
     			table = table.concat(structTable[i].toJSON());
     		}
 
-    		console.log(table);
     		await conn.close();
     		return table;
     	}
@@ -89067,7 +88746,6 @@ select * from output
     			table = table.concat(structTable[i].toJSON());
     		}
 
-    		console.log(table);
     		await conn.close();
     		return table;
     	}
@@ -89077,13 +88755,13 @@ select * from output
     		var data_payout = payout();
 
     		data_payout.then(function (value) {
-    			$$invalidate(3, dataPayout = { table: value });
+    			$$invalidate(4, dataPayout = { table: value });
     		});
 
     		var climatology = clim();
 
     		climatology.then(function (value) {
-    			$$invalidate(4, dataClimatology = { table: value });
+    			$$invalidate(5, dataClimatology = { table: value });
     		});
     	}
 
@@ -89106,7 +88784,7 @@ select * from output
     	let geo = [];
 
     	admin2s.then(function (value) {
-    		$$invalidate(2, geo = [...value]);
+    		$$invalidate(3, geo = [...value]);
     	});
 
     	let dataPayout = { table: [] };
@@ -89114,13 +88792,13 @@ select * from output
     	var data_payout = payout();
 
     	data_payout.then(function (value) {
-    		$$invalidate(3, dataPayout = { table: value });
+    		$$invalidate(4, dataPayout = { table: value });
     	});
 
     	var climatology = clim();
 
     	climatology.then(function (value) {
-    		$$invalidate(4, dataClimatology = { table: value });
+    		$$invalidate(5, dataClimatology = { table: value });
     	});
 
     	const data_sources = ['chirps', 'arc'];
@@ -89203,10 +88881,9 @@ select * from output
     		payouts_chirps,
     		payouts_arc,
     		clim_chirps,
-    		store,
-    		LoginComponent,
     		data_status,
     		db,
+    		data_loading_time,
     		loadData,
     		loadGeoLocations,
     		payout,
@@ -89225,18 +88902,18 @@ select * from output
     		viewCombinedPayout,
     		specCombinedPayout,
     		viewClimatology,
-    		specClimatology,
-    		$store
+    		specClimatology
     	});
 
     	$$self.$inject_state = $$props => {
     		if ('data_status' in $$props) $$invalidate(1, data_status = $$props.data_status);
     		if ('db' in $$props) $$invalidate(0, db = $$props.db);
+    		if ('data_loading_time' in $$props) $$invalidate(2, data_loading_time = $$props.data_loading_time);
     		if ('param_dict' in $$props) param_dict = $$props.param_dict;
     		if ('admin2s' in $$props) admin2s = $$props.admin2s;
-    		if ('geo' in $$props) $$invalidate(2, geo = $$props.geo);
-    		if ('dataPayout' in $$props) $$invalidate(3, dataPayout = $$props.dataPayout);
-    		if ('dataClimatology' in $$props) $$invalidate(4, dataClimatology = $$props.dataClimatology);
+    		if ('geo' in $$props) $$invalidate(3, geo = $$props.geo);
+    		if ('dataPayout' in $$props) $$invalidate(4, dataPayout = $$props.dataPayout);
+    		if ('dataClimatology' in $$props) $$invalidate(5, dataClimatology = $$props.dataClimatology);
     		if ('data_payout' in $$props) data_payout = $$props.data_payout;
     		if ('climatology' in $$props) climatology = $$props.climatology;
     		if ('viewPayout' in $$props) $$invalidate(8, viewPayout = $$props.viewPayout);
@@ -89266,10 +88943,10 @@ select * from output
     	return [
     		db,
     		data_status,
+    		data_loading_time,
     		geo,
     		dataPayout,
     		dataClimatology,
-    		$store,
     		update_param,
     		data_sources,
     		viewPayout,
